@@ -170,6 +170,36 @@ class MusicRecord {
 // Bubble (soap bubble look)
 // =====================================================
 class Bubble {
+   displayFallback2D() {
+  // 2Dで画面座標に投影して円を描く
+  const depthScale = map(this.z, -1500, 500, 0.3, 1.2);
+  const depthAlpha = map(this.z, -1500, 500, 0.25, 1.0);
+  const pulse = 1 + sin(this.pulsePhase) * 0.04;
+  const r = (this.size * pulse * depthScale) / 2;
+
+  // WEBGL中心座標 → 画面座標
+  const sx = width / 2 + this.pos.x;
+  const sy = height / 2 + this.pos.y;
+
+  begin2DOverlay();
+  depthOff();
+
+  noStroke();
+  const c = this.bubbleColor;
+  const a = 255 * this.alpha * depthAlpha * 0.85;
+  fill(red(c), green(c), blue(c), a);
+  circle(sx, sy, r * 2);
+
+  // rim
+  noFill();
+  stroke(180, 220 * depthAlpha);
+  strokeWeight(2);
+  circle(sx, sy, r * 2.05);
+
+  depthOn();
+  end2DOverlay();
+}
+
   constructor(x, y, z_, s, interactive) {
     this.pos = createVector(x, y);
     this.z = z_;
@@ -240,23 +270,30 @@ class Bubble {
     }
   }
 
-  display3D() {
-    push();
-    translate(this.pos.x, this.pos.y, this.z);
-
-    const depthScale = map(this.z, -1500, 500, 0.3, 1.2);
-    const depthAlpha = map(this.z, -1500, 500, 0.25, 1.0);
-    scale(depthScale);
-
-    rotateY(this.rotation);
-    rotateX(sin(this.pulsePhase) * 0.08);
-
-    const pulse = 1 + sin(this.pulsePhase) * 0.04;
-    const currentSize = this.size * pulse;
-
-    this.drawSoapBubbleSphere(currentSize / 2, depthAlpha);
-    pop();
+ display3D() {
+  // WEBGLが無ければ2D円で描く（落ちない）
+  if (!HAS_WEBGL) {
+    this.displayFallback2D();
+    return;
   }
+
+  push();
+  translate(this.pos.x, this.pos.y, this.z);
+
+  const depthScale = map(this.z, -1500, 500, 0.3, 1.2);
+  const depthAlpha = map(this.z, -1500, 500, 0.25, 1.0);
+  scale(depthScale);
+
+  rotateY(this.rotation);
+  rotateX(sin(this.pulsePhase) * 0.08);
+
+  const pulse = 1 + sin(this.pulsePhase) * 0.04;
+  const currentSize = this.size * pulse;
+
+  this.drawSoapBubbleSphere(currentSize / 2, depthAlpha);
+  pop();
+}
+
 
   // White-blowout resistant shading
   drawSoapBubbleSphere(r, depthAlpha) {
